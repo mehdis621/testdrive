@@ -3,6 +3,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import BottomNavBar from './components/BottomNavBar';
 import OfflineError from './components/OfflineError';
 import Login from './components/Login';
+import SettingsModal from './components/SettingsModal';
 
 const WEBSITE_URL = "https://test-drive.ir/test-questions-of-the-main-regulations/";
 
@@ -12,6 +13,11 @@ const App: React.FC = () => {
   const [iframeKey, setIframeKey] = useState<number>(0);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
   const [canGoBack, setCanGoBack] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(() => {
+    const savedZoom = localStorage.getItem('zoomLevel');
+    return savedZoom ? parseInt(savedZoom, 10) : 100;
+  });
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const initialLoadCompleted = useRef<boolean>(false);
@@ -19,6 +25,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('isLoggedIn', String(isLoggedIn));
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    localStorage.setItem('zoomLevel', String(zoomLevel));
+  }, [zoomLevel]);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
@@ -108,6 +118,8 @@ const App: React.FC = () => {
   if (!isLoggedIn) {
     return <Login onLogin={handleLogin} />;
   }
+  
+  const scale = zoomLevel / 100;
 
   return (
     <div className="w-screen h-screen bg-gray-900 animate-fade-in">
@@ -122,16 +134,24 @@ const App: React.FC = () => {
                 <p className="text-white mt-4 text-lg font-sans">در حال بارگذاری...</p>
               </div>
             )}
-            <iframe
-              ref={iframeRef}
-              key={iframeKey}
-              src={WEBSITE_URL}
-              title="آزمون آیین نامه رانندگی"
-              className={`w-full h-full border-0 transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-              onLoad={handleIframeLoad}
-              onError={handleIframeError}
-              sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation allow-downloads"
-            />
+            <div className="w-full h-full overflow-hidden">
+                <iframe
+                ref={iframeRef}
+                key={iframeKey}
+                src={WEBSITE_URL}
+                title="آزمون آیین نامه رانندگی"
+                className={`border-0 transition-opacity duration-500 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                style={{
+                    width: `${100 / scale}%`,
+                    height: `${100 / scale}%`,
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'top left',
+                }}
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+                sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation allow-downloads"
+                />
+            </div>
           </>
         )}
       </main>
@@ -142,9 +162,16 @@ const App: React.FC = () => {
           onShareClick={handleShareClick}
           onExitClick={handleLogout}
           onBackClick={handleBackClick}
+          onSettingsClick={() => setIsSettingsOpen(true)}
           canGoBack={canGoBack}
         />
       )}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        fontSize={zoomLevel}
+        onFontSizeChange={setZoomLevel}
+      />
     </div>
   );
 };
